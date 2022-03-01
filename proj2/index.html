@@ -1,7 +1,383 @@
-<html>
-	<head>
-	</head>
-	<body>
-		Project 2 here
-	</body>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<style>
+  body {
+    padding: 100px;
+    width: 1000px;
+    margin: auto;
+    text-align: left;
+    font-weight: 300;
+    font-family: 'Open Sans', sans-serif;
+    color: #121212;
+  }
+  h1, h2, h3, h4 {
+    font-family: 'Source Sans Pro', sans-serif;
+  }
+  code {
+  	padding: 2px;
+  	color: #c7254e;
+  	background-color: #f9f2f4;
+  	border-radius: 4px;
+  }
+</style>
+<title>CS 284 MeshEdit</title>
+<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+<link href="https://fonts.googleapis.com/css?family=Open+Sans|Source+Sans+Pro" rel="stylesheet">
+<script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+
+
+<body>
+	<a href="../index.html"><p align="middle">Projects Homepage</p></a>
+	<br>
+
+	<h1 align="middle">CS 284: Computer Graphics and Imaging, Spring 2022</h1>
+	<h1 align="middle">Project 2: MeshEdit</h1>
+	<h2 align="middle">Nianxu Wang (nianxuwang@berkeley.edu)</h2>
+	<br>
+
+	<div align="middle">
+		<img src="images/cover image.png" align="middle"  width="600px"/>
+<!-- 		<figcaption align="middle"><code>cow.dae</code> after loop subdivision</figcaption> -->
+	</div>
+	<br>
+
+	<h2 align="left">Overview</h2>
+
+	<p>
+		In project 2 we explored 2 main concepts: Bézier curves and surfaces, and meshes and their elements. In section I, we used the de Casteljau algorithm to draw 2D Bézier curves and 3D Bézier surfaces. In section II, we implemented various functions to allow us to manipulate the 3D mesh object, namely edge flips and splits, and upsampling with loop subdivision. 
+	</p>
+	<br>
+
+	<h1 align="middle">Section I: Bézier Curves and Surfaces</h1>
+	<br>
+	<h2 align="left">Part 1: Bézier Curves with 1D de Casteljau Subdivision</h2>
+
+	<p>
+		de Casteljau's algorithm is a recursive method to calculate a Bézier curve given a list of points. Part 1 asks us to evaluate a single step. Inside each step of recursive call, all we’re simply doing is interpolating between pairs of adjacent points by weight <code>t</code>. The size of the new list of points should be one less. The main code repeatedly calls this function we implemented until we resolve to a single point, which will be a point on the Bézier curve. 
+	</p>
+	<p>
+		Below is an example of the 6 stages of interpolation as well as the final Bézier curve in green, using 6 control points arranged in the shape of the star constellation Hydrus. 
+	</p>
+
+	<br>
+
+	<div align="middle">
+    <table>
+    	<tr>
+        <td>
+        	<img src="images/p1 hydrus 0.png" align="middle" width="500px"/>
+        </td>
+        <td>
+        	<img src="images/p1 hydrus 1.png" align="middle" width="500px"/>
+        </td>
+      </tr>
+      <tr>
+      	<td>
+        	<img src="images/p1 hydrus 2.png" align="middle" width="500px"/>
+        </td>
+        <td>
+        	<img src="images/p1 hydrus 3.png" align="middle" width="500px"/>
+        </td>
+      </tr>
+      <tr>
+      	<td>
+        	<img src="images/p1 hydrus 4.png" align="middle" width="500px"/>
+        </td>
+        <td>
+        	<img src="images/p1 hydrus 5.png" align="middle" width="500px"/>
+        </td>
+      </tr>
+    </table>
+	</div>
+
+	<br>
+
+	<p>
+		Here I moved the control points to create a different Bézier curve representing the star constellation Tucana while modifying the parameter <code>t</code> via mouse scrolling.
+	</p>
+
+	<div align="middle">
+		<img src="images/p1 tucana.gif"/>
+	</div>
+	<br>
+
+
+	<h2 align="left">Part 2: Bézier Surfaces with Separable 1D de Casteljau</h2>
+
+	<p>
+		In part 2 we extended Bézier curves to Bézier surfaces. The gist of how this works is by interpolating between the curves, by extending another dimension and using Vector3D instead of Vector2D we applied the curves together creating a surface. Unlike Bézier curves, our surfaces now require parametric equations of <code>u</code> and <code>v</code> instead of simply <code>t</code>.
+		The technique we used here called Separable 1D de Casteljau Subdivision does the de Casteljau interpolation in the <code>u</code> dimension first then uses those control points to evaluate the <code>v</code> points on the moving Bézier curve, essentially sweeping it out along the <code>u</code> curves. 
+	</p>
+
+	<div align="middle">
+		<img src="images/p2 teapot.png" align="middle" width="600px"/>
+		<figcaption align="middle"><code>bez/teapot.bez</code> <i>drawn using my code</i></figcaption>
+	</div>
+	<br>
+
+	<h1 align="middle">Section II: Triangle Meshes and Half-Edge Data Structure</h1>
+	<br>
+	<h2 align="left">Part 3: Area-Weighted Vertex Normals</h2>
+
+	<p>
+		The gist of the method is this: I first instantiated a <code>Vector3D</code> to store the sum of the normals. Then iterate over all triangles surrounding vertex, and for each triangle get two edges to calculate the cross product in order to find the area (no need to divide by 2 since we want proportions anyway). Add all the results together, and finally renormalize the sum vector. 
+	</p>
+
+	<p>
+		The image below shows <code>teapot.dae</code> with the difference between flat and phong shading before and after toggling vertex normals. (I turned off the wireframe for clearer results).
+	</p>
+
+	<div align="middle">
+		<table>
+			<tr>
+				<td>
+        	<img src="images/p3 flat.png" align="middle" width="500px"/>
+        	<figcaption align="middle"><i>Without vertex normals</i></figcaption>
+        </td>
+        <td>
+        	<img src="images/p3 phong.png" align="middle" width="500px"/>
+        	<figcaption align="middle"><i>With vertex normals</i></figcaption>
+        </td>
+			</tr>
+		</table>
+	</div>
+	<br>
+
+	<h2 align="left">Part 4: Edge Flip</h2>
+
+	<p>
+		My approach to this was simply by drawing out the entire before and after diagram for a single case, and then systematically and thoroughly approaching it when coding. 
+	</p>
+
+	<div align="middle">
+		<img src="images/p4 diagram.png" align="middle" width="800px"/>
+		<figcaption align="middle"><i>The diagram I drew in Photoshop to determine the pointer assignments</i></figcaption>
+	</div>
+
+	<p>
+		Overall, I think preplanning and drawing the diagram helped me avoid any major issues. Most of the time consumed was for understanding the classes and envisioning the diagram beforehand rather than trying to fix things afterwards. At the end, following the HalfEdgeMesh primer document, I set the halfedge() member of each element (vertex, edge, or face) to a valid halfedge associated with it. This way we are properly linking all elements to the mesh. 
+
+		One mistake I made was forgetting about the input e0 for a while. Since our habit and convention is 0-indexing, when I was listing the other 4 edges initially I accidentally started the naming with e0. I quickly fixed this though when I took another look at my diargam and started thinking about setting neighbors when I realized that we should have 5 edges total and I was missing one. 
+	</p>
+	<p>
+		Side note: I only realized afterwards that there was a PDF that already drew out the diagram and wrote half the code for us. The link was buried at the bottom of some other notes provided to us. 
+		<a href="http://15462.courses.cs.cmu.edu/fall2015content/misc/HalfedgeEdgeOpImplementationGuide.pdf" target="_blank">Here is the link to the diagram provided by the teaching team.</a> As you can see, I went counterclockwise with my triangle winding order, whereas they went clockwise. The result was the same though, as long as we stay consistent. 
+	</p>
+
+	<div align="middle">
+		<table>
+			<tr>
+				<td>
+        	<img src="images/p4 before.png" align="middle" width="500px"/>
+        	<figcaption align="middle"><i>Original mesh</i></figcaption>
+        </td>
+        <td>
+        	<img src="images/p4 after.png" align="middle" width="500px"/>
+        	<figcaption align="middle"><i>After flipping some edges</i></figcaption>
+        </td>
+			</tr>
+		</table>
+	</div>
+	<br>
+
+	<h2 align="left">Part 5: Edge Split</h2>
+
+	<p>
+		The implementation of edge split is very similar to the edge flip method above, just with many more pointer assignments to consider. Once again, I first drew a diagram as a plan that while time consuming, helped prevent any bugs. The hardest part of coding this portion was trying to not have any lapses in concentration as I carefully assigned each variable to its correct spot. 		
+	</p>
+
+	<div align="middle">
+		<img src="images/p5 diagram.png" align="middle" width="800px"/>
+		<figcaption align="middle"><i>Pointer assignments for edge split</i></figcaption>
+	</div>
+
+	<p>
+		Being bored of seeing the teapot so much, I chose the Beetle car to demonstrate my edge splits and flips. For the combination of edge splits and flips, edge flips only work well with convex quads (since it disappears with a triangle), so after splitting and creating some edges that were dividing triangles and not quads, I had to make sure to only flip the edges that were across quads. 
+	</p>
+
+	<div align="middle">
+		<table>
+			<tr>
+				<td>
+        	<img src="images/p5 original 1.png" align="middle" width="500px"/>
+        	<figcaption align="middle"><i>Original Beetle mesh (front)</i></figcaption>
+        </td>
+        <td>
+        	<img src="images/p5 split.png" align="middle" width="500px"/>
+        	<figcaption align="middle"><i>Some edge splits performed down the front</i></figcaption>
+        </td>
+			</tr>
+			<tr>
+				<td>
+        	<img src="images/p5 original 2.png" align="middle" width="500px"/>
+        	<figcaption align="middle"><i>Original Beetle mesh (side)</i></figcaption>
+        </td>
+        <td>
+        	<img src="images/p5 split flip.png" align="middle" width="500px"/>
+        	<figcaption align="middle"><i>Both edge splits and flips done</i></figcaption>
+        </td>
+			</tr>
+		</table>
+	</div>
+	<br>
+
+
+	<h2 align="left">Part 6: Loop Subdivision for Mesh Upsampling</h2>
+
+	<p>
+		In part 6, we implement loop subdivision, a type of mesh upsampling method that essentially subdivides each triangle into 4. 
+		The general steps I followed were outlined in the assignment: 
+	</p>
+
+	<ol>
+		<li>
+			I first looped over all original vertices in the input mesh, computing and storing their new positions but not actually updating it. The new position of an old vertex is:
+
+			$$ (1 - n * u) * original\_position + u * original\_neighbor\_position\_sum $$
+		</li>
+		<li>
+			Then, iterate through all the edges of the input mesh and compute the positions of new vertices, which will be created through splitting existing edges. Once again, storing but not actually updating the values. The weighting formula, where A, B, C, and D are the 4 neighboring vertices, is: 
+
+			$$ \frac{3}{8} * (A + B) + \frac{1}{8} * (C + D) $$
+
+			Note that so far no actual splitting or creating of new vertices has happened, we're just pre-computing everything because it's easier to traverse the simpler original mesh than a more complicated subdivided one.
+		</li>
+		<li>
+			Now we actually split all the original edges and set the new position of the newly created vertices at the middle of the edge to the position value calculated in step 2.
+		</li>
+		<li>
+			Then we iterate over all the edges including newly created ones and flip the newly created edges if one vertex is new and the other is old. 
+		</li>
+		<li>
+			Finally, iterated over all vertices and update to their stored newPositions
+		</li>
+	</ol>
+
+	<br>
+
+	<p>
+		After loop subdivision, sharp corners and edges are smoothed and rounded out. A example is the torus below, going through 4 stages of loop subdivision. 
+	</p>
+
+	<div align="middle">
+		<tr>
+			<td>
+				<img src="images/p6 torus 0.png" width="300px"/>
+			</td>
+			<td>
+				<img src="images/p6 torus 1.png" width="300px"/>
+			</td>
+			<td>
+				<img src="images/p6 torus 2.png" width="300px"/>
+			</td>
+			<td>
+				<img src="images/p6 torus 3.png" width="300px"/>
+			</td>
+			<td>
+				<img src="images/p6 torus 4.png" width="300px"/>
+			</td>
+		</tr>
+	</div>
+
+	<br>
+	<p>
+		We can do some pre-splits to affect this behavior. Here we can see that doing some edge splits on the original mesh meant that the final result was not as evenly rounded, with the curves being more "pinched" due to having more geometry there at the start before subdividing. 
+	</p>
+
+	<div align="middle">
+		<tr>
+			<td>
+				<img src="images/p6 torus 00.png" width="300px"/>
+			</td>
+			<td>
+				<img src="images/p6 torus 11.png" width="300px"/>
+			</td>
+			<td>
+				<img src="images/p6 torus 22.png" width="300px"/>
+			</td>
+			<td>
+				<img src="images/p6 torus 33.png" width="300px"/>
+			</td>
+			<td>
+				<img src="images/p6 torus 44.png" width="300px"/>
+			</td>
+		</tr>
+	</div>
+	<br>
+
+	<p>
+		Another case of this can be observed with the cube. Notice how the cube becomes asymmetric after the subdivisions.
+	</p>
+
+	<div align="middle">
+		<tr>
+			<td>
+				<img src="images/p6 cube asym 0.png" width="300px"/>
+			</td>
+			<td>
+				<img src="images/p6 cube asym 1.png" width="300px"/>
+			</td>
+			<td>
+				<img src="images/p6 cube asym 2.png" width="300px"/>
+			</td>
+			<td>
+				<img src="images/p6 cube asym 3.png" width="300px"/>
+			</td>
+			<td>
+				<img src="images/p6 cube asym 4.png" width="300px"/>
+			</td>
+		</tr>
+	</div>
+	<br>
+
+	<p>
+		This is because the original input cube mesh is not evenly divided as it has a single diagonal across each face to split the quad into triangles. This means that some vertices will have 3 adjacent edges, while some has as many as 5, which is what's causing the imbalance. The solution is to evenly divide the surfaces such that each vertex has the same number of outgoing edges. A simple fix is by adding a single split per face turning it into a cross. 
+	</p>
+
+	<div align="middle">
+		<tr>
+			<td>
+				<img src="images/p6 cube sym 0.png" width="300px"/>
+			</td>
+			<td>
+				<img src="images/p6 cube sym 1.png" width="300px"/>
+			</td>
+			<td>
+				<img src="images/p6 cube sym 2.png" width="300px"/>
+			</td>
+			<td>
+				<img src="images/p6 cube sym 3.png" width="300px"/>
+			</td>
+			<td>
+				<img src="images/p6 cube sym 4.png" width="300px"/>
+			</td>
+		</tr>
+	</div>
+	<br>
+
+	<p>
+		The comparison is shown more clearly from the front. 
+	</p>
+
+	<div align="middle">
+		<tr>
+			<td>
+				<img src="images/p6 cube asym front.png" width="300px"/>
+			</td>
+			<td>
+				<img src="images/p6 cube sym front.png" width="300px"/>
+			</td>
+		</tr>
+	</div>
+	<br>
+
+
+
+	<a href="../index.html"><p align="middle">Projects Homepage</p></a>
+
+</body>
+
 </html>
