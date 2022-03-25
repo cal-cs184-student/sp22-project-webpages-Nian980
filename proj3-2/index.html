@@ -1,7 +1,212 @@
-<html>
-	<head>
-	</head>
-	<body>
-		Project 3-2 here
-	</body>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<style>
+  body {
+    padding: 100px;
+    width: 1000px;
+    margin: auto;
+    text-align: left;
+    font-weight: 300;
+    font-family: 'Open Sans', sans-serif;
+    color: #121212;
+  }
+  h1, h2, h3, h4 {
+    font-family: 'Source Sans Pro', sans-serif;
+  }
+  code {
+  	padding: 2px;
+  	color: #c7254e;
+  	background-color: #f9f2f4;
+  	border-radius: 4px;
+  }
+
+  .tableClass { 
+  	border: 1px solid black;
+  	border-collapse: collapse;
+  	padding: 10px 8px;
+  	text-align: left;
+  }
+
+</style>
+<title>CS 284 Pathtracer</title>
+<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+<link href="https://fonts.googleapis.com/css?family=Open+Sans|Source+Sans+Pro" rel="stylesheet">
+<script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+
+<body>
+	<a href="../index.html"><p align="middle">Projects Homepage</p></a>
+	<br>
+
+	<h1 align="middle">CS 284: Computer Graphics and Imaging, Spring 2022</h1>
+	<h1 align="middle">Project 3-2: Pathtracer 2</h1>
+	<h2 align="middle">Nianxu Wang (nianxuwang@berkeley.edu)</h2>
+	<br>
+
+	<div align="middle">
+		<img src="images/Part1/CBlucy.png" align="middle" width="500px">
+		<figcaption><i>sky/CBlucy.dae glass rendering</i></figcaption>
+	</div>
+	<br>
+
+	<br>
+
+	<h2 align="left">Overview</h2>
+	<p>
+		This assignment extends Pathtracer 1 and focuses on creating new materials that we can render rather than simply diffuse. I implemented part 1 and 2. Part 1 is about reflection and refraction, which allows us to implement glass and mirror materials. Part 2 is about microfacets, which allow us to implement metals and other materials of varying roughness and refraction indices. 
+	</p>
+	<br>
+
+	<h1 align="middle">Part 1: Mirror and Glass Materials</h1>
+	<br>
+
+	<h3 align="left">CBSpheres rendered</h3>
+
+	<p>
+		Set to 512 samples per pixel and 4 samples per light. 
+	</p>
+
+	<div align="middle">
+    <table>
+    	<tr>
+    		<td>
+    			<img src="images/Part1/m0_512_4_CBSpheres.png" align="middle" width="500px"/>
+        		<figcaption align="middle"><i>max_ray_depth = 0</i></figcaption>
+    		</td>
+    		<td>
+    			<img src="images/Part1/m1_512_4_CBSpheres.png" align="middle" width="500px"/>
+        		<figcaption align="middle"><i>max_ray_depth = 1</i></figcaption>
+    		</td>
+    	</tr>
+    	<tr>
+    		<td>
+    			<img src="images/Part1/m2_512_4_CBSpheres.png" align="middle" width="500px"/>
+        		<figcaption align="middle"><i>dmax_ray_depth = 2</i></figcaption>
+    		</td>
+    		<td>
+    			<img src="images/Part1/m3_512_4_CBSpheres.png" align="middle" width="500px"/>
+        		<figcaption align="middle"><i>max_ray_depth = 3</i></figcaption>
+    		</td>
+    	</tr>
+    	<tr>
+    		<td>
+    			<img src="images/Part1/m4_512_4_CBSpheres.png" align="middle" width="500px"/>
+        		<figcaption align="middle"><i>max_ray_depth = 4</i></figcaption>
+    		</td>
+    		<td>
+    			<img src="images/Part1/m5_512_4_CBSpheres.png" align="middle" width="500px"/>
+        		<figcaption align="middle"><i>max_ray_depth = 5</i></figcaption>
+    		</td>
+    	</tr>
+    	<tr>
+    		<td>
+    			<img src="images/Part1/m100_512_4_CBSpheres.png" align="middle" width="500px"/>
+        		<figcaption align="middle"><i>max_ray_depth = 100</i></figcaption>
+    		</td>
+    	</tr>
+    </table>
+	</div>
+	<br>
+	
+	<h3 align="left">Point out the new multibounce effects that appear in each image. Explain how these bounce numbers relate to the particular effects that appear.</h3>
+
+	<p>
+		max_ray_depth = 0: Nothing rendered except light (an emitter), since there are no bounces. <br>
+		max_ray_depth = 1: The walls are opaque and diffuse, so with only a single bounce it starts to show up. The ceiling is not lit yet, since we need another bounce off the walls to reach that. The spheres are all black except the specular highlight, because with a single bounce, we can’t refract or reflect properly yet. The specular part is rendered because it’s the brightest part since the surface normal at those points perfectly bisects the angle between the direction to the light and camera, and it doesn’t need any refractions or reflection. <br>
+		max_ray_depth = 2: Ceiling is now lit, as light bounces off the walls onto it. The back sphere, the mostly reflective one, is now rendered because the light now has a chance to bounce to the walls to indicate what the sphere is actually reflecting. On the sphere reflection, the ceiling is still black; we would need another reflection to reach that. The glass sphere still cannot refract properly with only 2 bounces. <br>
+		max_ray_depth = 3: Everything is starting to come together now. For the reflective sphere in the back, the ceiling part is now lit up. The glass is showing refraction, because with 3 bounces the light can enter the glass, exit, and bounce off walls. The glass ball reflected in the reflective sphere is still all black, again we need an extra bounce to pick up on  the image refracted by the glass ball. <br>
+		max_ray_depth = 4: The scene is a little brighter overall since more light transports around. The glass ball reflection shown in the reflective ball is lit up now too. There appears to be a small specular light shown on the lavender wall on the right, which is most likely the glass ball concentrating refracted light onto it. <br>
+		max_ray_depth = 5: No major changed from before, maybe a tiny bit brighter. <br>
+		max_ray_depth = 100: Likewise, no interesting change, just a little bit brighter. <br>
+	</p>
+	<br>
+
+
+	<h1 align="middle">Part 2: Microfacet Material</h1>
+	<br>
+
+
+	<h3 align="left">Rendering of CBdragon_microfacet_au.dae</h3>
+
+	<p>
+		CBdragon_microfacet_au.dae rendered with alpha set to 0.005, 0.05, 0.25 and 0.5. Samples per pixel = 512, samples per light = 4, max_ray_depth = 7. 
+	</p>
+
+	<div align="middle">
+    <table>
+    	<tr>
+    		<td>
+    			<img src="images/Part2/CBdragon_microfacet_au_1.png" align="middle" width="500px"/>
+        		<figcaption align="middle"><i>alpha = 0.005</i></figcaption>
+    		</td>
+    		<td>
+    			<img src="images/Part2/CBdragon_microfacet_au_2.png" align="middle" width="500px"/>
+        		<figcaption align="middle"><i>alpha = 0.05</i></figcaption>
+    		</td>
+    	</tr>
+    	<tr>
+    		<td>
+    			<img src="images/Part2/CBdragon_microfacet_au_3.png" align="middle" width="500px"/>
+        		<figcaption align="middle"><i>alpha = 0.25</i></figcaption>
+    		</td>
+    		<td>
+    			<img src="images/Part2/CBdragon_microfacet_au_4.png" align="middle" width="500px"/>
+        		<figcaption align="middle"><i>alpha = 0.5</i></figcaption>
+    		</td>
+    	</tr>
+    </table>
+	</div>
+	<br>
+
+	<p>
+		Alpha value changes the roughness of the material. We can see a smaller alpha means a shinier and smoother surface, whereas a larger alpha looks less polished and rougher. A smaller smoother alpha makes the dragon almost act like a mirror, and reflects some of the lavender color from the right wall (just like how a shiny metal surface would act in real life). 
+	</p>
+	<br>
+
+	<h3 align="left">Rendering of CBbunny_microfacet_cu.dae with cosine hemisphere sampling and importance sampling</h3>
+
+	<div align="middle">
+    <table>
+    	<tr>
+    		<td>
+    			<img src="images/Part2/CBbunny_microfacet_cu_hemi.png" align="middle" width="500px"/>
+        		<figcaption align="middle"><i>alpha = 0.005</i></figcaption>
+    		</td>
+    		<td>
+    			<img src="images/Part2/CBbunny_microfacet_cu_importance.png" align="middle" width="500px"/>
+        		<figcaption align="middle"><i>alpha = 0.05</i></figcaption>
+    		</td>
+    	</tr>
+    </table>
+	</div>
+	<br>
+
+	<p>
+		First of all, due to the lower sampling rate both images are noisier than previous renders. However, we can see that the default hemisphere sampling is noisier. This is because for a point, we are evenly and randomly sampling across the hemisphere, and there is not guarantee we’re going to get a lot of light onto that point. With importance sampling, we sample and look at places that would contribute to the lighting more, and hence a less noisy image with the same number of samples. In our implementation, our importance sampling function is aligned with the Beckmann distribution, which we implemented earlier as our normal distribution function. This is much closer to how micro facets work than using hemisphere sampling, which is mainly used for sampling diffuse BRDFs. 
+	</p>
+	<br>
+
+
+	<h3 align="left">Rendering of CBbunny_microfacet_cu.dae with Chromium material</h3>
+
+	<p>		
+		Chromium (Cr) <br>
+		Alpha = 0.05 <br>
+		R: 614 nm, eta = 3.1743, k = 3.3000 <br>
+		G: 549 nm, eta = 3.1800, k = 3.3300 <br>
+		B: 466 nm, eta = 2.4650, k = 3.2150 <br>
+	</p>
+
+	<div align="middle">
+		<img src="images/Part2/CBbunny_microfacet_chromium.png" align="middle" width="500px"/>
+	</div>
+	<br>
+
+
+	<a href="../index.html"><p align="middle">Projects Homepage</p></a>
+
+
+</body>
 </html>
